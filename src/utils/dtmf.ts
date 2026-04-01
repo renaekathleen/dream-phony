@@ -16,30 +16,24 @@ const DTMF_FREQS: Record<string, [number, number]> = {
   '#': [941, 1477],
 };
 
-const DURATION = 0.15;
-const SAMPLE_RATE = 8000;
-const AMPLITUDE = 0.25;
+const SAMPLE_RATE = 16000;
+
 const playerCache = new Map<string, AudioPlayer>();
+let outgoingRingPlayer: AudioPlayer | null = null;
+let incomingRingPlayer: AudioPlayer | null = null;
 let initialized = false;
 
-function writeString(view: DataView, offset: number, str: string): void {
-  for (let i = 0; i < str.length; i++) {
-    view.setUint8(offset + i, str.charCodeAt(i));
-  }
-}
-
-function generateWavBytes(freq1: number, freq2: number): Uint8Array {
-  const numSamples = Math.floor(SAMPLE_RATE * DURATION);
+function writeWavHeader(view: DataView, numSamples: number): void {
   const dataSize = numSamples * 2;
   const fileSize = 44 + dataSize;
 
-  const buffer = new ArrayBuffer(fileSize);
-  const view = new DataView(buffer);
-
-  writeString(view, 0, 'RIFF');
+  const hdr = 'RIFF';
+  for (let i = 0; i < 4; i++) view.setUint8(i, hdr.charCodeAt(i));
   view.setUint32(4, fileSize - 8, true);
-  writeString(view, 8, 'WAVE');
-  writeString(view, 12, 'fmt ');
+  const wav = 'WAVE';
+  for (let i = 0; i < 4; i++) view.setUint8(8 + i, wav.charCodeAt(i));
+  const fmt = 'fmt ';
+  for (let i = 0; i < 4; i++) view.setUint8(12 + i, fmt.charCodeAt(i));
   view.setUint32(16, 16, true);
   view.setUint16(20, 1, true);
   view.setUint16(22, 1, true);
@@ -47,18 +41,65 @@ function generateWavBytes(freq1: number, freq2: number): Uint8Array {
   view.setUint32(28, SAMPLE_RATE * 2, true);
   view.setUint16(32, 2, true);
   view.setUint16(34, 16, true);
-  writeString(view, 36, 'data');
+  const data = 'data';
+  for (let i = 0; i < 4; i++) view.setUint8(36 + i, data.charCodeAt(i));
   view.setUint32(40, dataSize, true);
+}
+
+function generateWav(
+  durationSec: number,
+  sampleFn: (t: number) => number
+): Uint8Array {
+  const numSamples = Math.floor(SAMPLE_RATE * durationSec);
+  const buffer = new ArrayBuffer(44 + numSamples * 2);
+  const view = new DataView(buffer);
+
+  writeWavHeader(view, numSamples);
 
   for (let i = 0; i < numSamples; i++) {
     const t = i / SAMPLE_RATE;
-    const sample =
-      Math.sin(2 * Math.PI * freq1 * t) +
-      Math.sin(2 * Math.PI * freq2 * t);
-    view.setInt16(44 + i * 2, Math.floor(sample * AMPLITUDE * 32767), true);
+    const sample = Math.max(-1, Math.min(1, sampleFn(t)));
+    view.setInt16(44 + i * 2, Math.floor(sample * 32767), true);
   }
 
   return new Uint8Array(buffer);
+}
+
+function dtmfSample(f1: number, f2: number): (t: number) => number {
+  return (t) => 0.25 * (Math.sin(2 * Math.PI * f1 * t) + Math.sin(2 * Math.PI * f2 * t));
+}
+
+/**
+ * US ringback tone: 440 + 480 Hz
+ * Pattern: 2s on, 3s off, 2s on (total ~7s)
+ */
+function outgoingRingSample(t: number): number {
+  const cycle = t % 5;
+  if (cycle > 2) return 0;
+  const amp = 0.2;
+  const fadeIn = Math.min(cycle / 0.02, 1);
+  const fadeOut = Math.min((2 - cycle) / 0.02, 1);
+  const envelope = fadeIn * fadeOut;
+  return amp * envelope * (
+    Math.sin(2 * Math.PI * 440 * t) +
+    Math.sin(2 * Math.PI * 480 * t)
+  );
+}
+
+/**
+ * Classic incoming phone ring: ~1000 Hz + ~1400 Hz modulated by 20 Hz
+ * Pattern: 0.4s ring, 0.2s silence, 0.4s ring, 1.5s silence (repeats)
+ */
+function incomingRingSample(t: number): number {
+  const cycle = t % 2.5;
+  const isRinging = cycle < 0.4 || (cycle >= 0.6 && cycle < 1.0);
+  if (!isRinging) return 0;
+  const amp = 0.3;
+  const modulator = 0.5 + 0.5 * Math.sin(2 * Math.PI * 20 * t);
+  return amp * modulator * (
+    Math.sin(2 * Math.PI * 1000 * t) +
+    0.7 * Math.sin(2 * Math.PI * 1400 * t)
+  );
 }
 
 function safeFileName(digit: string): string {
@@ -67,21 +108,34 @@ function safeFileName(digit: string): string {
   return digit;
 }
 
+function createAndCachePlayer(name: string, bytes: Uint8Array): AudioPlayer | null {
+  try {
+    const file = new File(Paths.cache, `${name}.wav`);
+    file.write(bytes);
+    return createAudioPlayer({ uri: file.uri });
+  } catch {
+    return null;
+  }
+}
+
 export async function initDTMF(): Promise<void> {
   if (initialized) return;
 
   for (const [digit, [f1, f2]] of Object.entries(DTMF_FREQS)) {
-    try {
-      const bytes = generateWavBytes(f1, f2);
-      const file = new File(Paths.cache, `dtmf_${safeFileName(digit)}.wav`);
-      file.write(bytes);
-
-      const player = createAudioPlayer({ uri: file.uri });
-      playerCache.set(digit, player);
-    } catch {
-      // skip this tone
-    }
+    const bytes = generateWav(0.15, dtmfSample(f1, f2));
+    const player = createAndCachePlayer(`dtmf_${safeFileName(digit)}`, bytes);
+    if (player) playerCache.set(digit, player);
   }
+
+  outgoingRingPlayer = createAndCachePlayer(
+    'ring_outgoing',
+    generateWav(7, outgoingRingSample)
+  );
+
+  incomingRingPlayer = createAndCachePlayer(
+    'ring_incoming',
+    generateWav(5, incomingRingSample)
+  );
 
   initialized = true;
 }
@@ -90,4 +144,30 @@ export function playTone(digit: string): void {
   const player = playerCache.get(digit);
   if (!player) return;
   player.seekTo(0).then(() => player.play()).catch(() => {});
+}
+
+function playRing(player: AudioPlayer | null): Promise<void> {
+  if (!player) return Promise.resolve();
+  return player.seekTo(0).then(() => player.play()).catch(() => {});
+}
+
+function stopRing(player: AudioPlayer | null): void {
+  if (!player) return;
+  try { player.pause(); } catch {}
+}
+
+export function playOutgoingRing(): Promise<void> {
+  return playRing(outgoingRingPlayer);
+}
+
+export function stopOutgoingRing(): void {
+  stopRing(outgoingRingPlayer);
+}
+
+export function playIncomingRing(): Promise<void> {
+  return playRing(incomingRingPlayer);
+}
+
+export function stopIncomingRing(): void {
+  stopRing(incomingRingPlayer);
 }

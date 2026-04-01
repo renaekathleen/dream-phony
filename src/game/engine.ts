@@ -1,4 +1,4 @@
-import { Boy, Clue, ClueCategory, CallResult } from './types';
+import { Boy, Clue, ClueCategory, CallResult, FriendCall } from './types';
 import {
   BOYS,
   ALL_LOCATIONS,
@@ -111,11 +111,16 @@ function buildCluePool(crush: Boy): Clue[] {
   return pool;
 }
 
+const FRIEND_CALL_SCHEDULE = [4, 10, 18, 28];
+
 export class DreamPhoneEngine {
   private crush: Boy | null = null;
   private clueMap = new Map<string, Clue | null>();
   private calledBoys = new Set<string>();
   private _lastCall: CallResult | null = null;
+  private turnCount = 0;
+  private friendCallQueue: string[] = [];
+  private nextFriendCallIndex = 0;
 
   get gameActive(): boolean {
     return this.crush !== null;
@@ -137,6 +142,11 @@ export class DreamPhoneEngine {
     this.clueMap.clear();
     this.calledBoys.clear();
     this._lastCall = null;
+    this.turnCount = 0;
+    this.nextFriendCallIndex = 0;
+    this.friendCallQueue = shuffleArray(
+      nonCrushBoys.map((b) => b.name)
+    );
 
     for (let i = 0; i < nonCrushBoys.length; i++) {
       this.clueMap.set(
@@ -194,6 +204,20 @@ export class DreamPhoneEngine {
     return boy.id === this.crush.id
       ? { type: 'correct_guess', boy }
       : { type: 'wrong_guess', boy };
+  }
+
+  recordTurn(): void {
+    this.turnCount++;
+  }
+
+  checkFriendCall(): FriendCall | null {
+    if (this.nextFriendCallIndex >= FRIEND_CALL_SCHEDULE.length) return null;
+    if (this.turnCount < FRIEND_CALL_SCHEDULE[this.nextFriendCallIndex]) return null;
+    if (this.nextFriendCallIndex >= this.friendCallQueue.length) return null;
+
+    const name = this.friendCallQueue[this.nextFriendCallIndex];
+    this.nextFriendCallIndex++;
+    return { eliminatedName: name };
   }
 
   redial(): CallResult | null {

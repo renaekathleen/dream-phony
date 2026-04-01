@@ -1,10 +1,16 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { DreamPhoneEngine } from '../game/engine';
-import { CallResult, GameState } from '../game/types';
+import { CallResult, FriendCall, GameState } from '../game/types';
 import { speakClue, speak, stopSpeaking } from '../utils/speech';
 import { findBoyByPhone, formatPhoneNumber } from '../game/data';
 import { initAudioRouting, setSpeakerphone } from '../utils/audioRouting';
-import { initDTMF } from '../utils/dtmf';
+import {
+  initDTMF,
+  playOutgoingRing,
+  stopOutgoingRing,
+  playIncomingRing,
+  stopIncomingRing,
+} from '../utils/dtmf';
 
 const INITIAL_STATE: GameState = {
   gameActive: false,
@@ -129,7 +135,9 @@ export function useGameEngine() {
     if (result.type === 'wrong_number') {
       setState((s) => ({ ...s, isCalling: true, dialedDigits: '' }));
       setDisplay('Calling...', '', '* ring * ring *');
-      await speak('ring ring ring');
+      await playOutgoingRing();
+      await new Promise((r) => setTimeout(r, 3000));
+      stopOutgoingRing();
       setDisplay('Uh oh!', '', 'Wrong number!');
       await speak('Uh oh, wrong number!');
       setState((s) => ({ ...s, isCalling: false }));
@@ -144,11 +152,14 @@ export function useGameEngine() {
     }));
 
     setDisplay(`Calling ${result.boy!.name}...`, '', '* ring * ring *');
-    await speak('ring ring ring');
+    await playOutgoingRing();
+    await new Promise((r) => setTimeout(r, 3000));
+    stopOutgoingRing();
 
     await playClueResult(result, isFirst, currentState.speakerphone);
 
     setState((s) => ({ ...s, isCalling: false }));
+    await checkAndPlayFriendCall();
   }, [state, setDisplay]);
 
   const playClueResult = async (
@@ -202,6 +213,36 @@ export function useGameEngine() {
     await speak(clue.quietMessage);
   };
 
+  const playFriendCall = async (friendCall: FriendCall) => {
+    setState((s) => ({ ...s, isCalling: true }));
+    await setSpeakerphone(true);
+
+    setDisplay('Incoming call...', '', '* ring * ring *');
+    await playIncomingRing();
+    await new Promise((r) => setTimeout(r, 3500));
+    stopIncomingRing();
+
+    setDisplay('Your friend:', '', 'I just heard...');
+    await speak('Hey! I just heard something!');
+
+    const msg = `It's not ${friendCall.eliminatedName}!`;
+    setDisplay('Your friend:', '', `It's not`, friendCall.eliminatedName + '!');
+    await speak(msg);
+
+    await new Promise((r) => setTimeout(r, 800));
+    setState((s) => ({ ...s, isCalling: false }));
+  };
+
+  const checkAndPlayFriendCall = async () => {
+    const engine = engineRef.current;
+    engine.recordTurn();
+    const friendCall = engine.checkFriendCall();
+    if (friendCall) {
+      await new Promise((r) => setTimeout(r, 2000));
+      await playFriendCall(friendCall);
+    }
+  };
+
   const redial = useCallback(async () => {
     const engine = engineRef.current;
     const lastCall = engine.redial();
@@ -220,11 +261,14 @@ export function useGameEngine() {
       '',
       formatPhoneNumber(lastCall.boy.phoneNumber)
     );
-    await speak('ring ring ring');
+    await playOutgoingRing();
+    await new Promise((r) => setTimeout(r, 3000));
+    stopOutgoingRing();
 
     await playClueResult(lastCall, false, state.speakerphone);
 
     setState((s) => ({ ...s, isCalling: false }));
+    await checkAndPlayFriendCall();
   }, [state.isCalling, state.speakerphone, setDisplay]);
 
   const toggleSpeakerphone = useCallback(() => {

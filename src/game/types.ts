@@ -31,6 +31,10 @@ export interface CallResult {
   clue?: Clue;
 }
 
+export interface FriendCall {
+  eliminatedName: string;
+}
+
 export interface GameState {
   gameActive: boolean;
   guessMode: boolean;
