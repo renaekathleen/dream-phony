@@ -1,12 +1,12 @@
 # Dream Phony
 
-A phone app that replaces the electronic handset from the classic board game *Electronic Dream Phone* by Milton Bradley (1991). Run it on your Android phone and use it with the original game board and cards — or generate your own custom set.
+A phone app that replaces the electronic handset from the classic board game *Electronic Dream Phone* by Milton Bradley (1991). Run it on your Android phone and use it with the original game board and cards, or generate your own custom set.
 
 ## What is this?
 
 *Electronic Dream Phone* is a deduction board game where players dial phone numbers to receive clues about a secret admirer. The physical handset plays recorded audio responses through an earpiece or speakerphone.
 
-**Dream Phony** is a drop-in replacement for that handset. It generates text-to-speech clues, plays DTMF tones when you press buttons, and routes audio through the earpiece or speaker — just like the original. It also supports custom data sets so you can create your own themed versions of the game.
+**Dream Phony** is a drop-in replacement for that handset. It generates text-to-speech clues, plays DTMF tones when you press buttons, and routes audio through the earpiece or speaker, just like the original. There's also a toggleable text display so you can read the clues on screen instead of (or in addition to) listening. Handy for noisy rooms or for anyone who prefers reading to listening. It also supports custom data sets so you can create your own themed versions of the game.
 
 ## Project structure
 
@@ -21,6 +21,8 @@ dream-phony/
 │   └── src/
 └── assets/               App icons and splash screens
 ```
+
+![Dream Phony screenshot](assets/screenshots/phone-app.png)
 
 ## Phone app
 
@@ -45,8 +47,8 @@ npx eas build -p android --profile preview
 
 Two data sets are included:
 
-- **`data.ts`** — A gender-inclusive set with 24 characters using they/them pronouns, original locations, and updated activities/foods/clothing.
-- **`data.old.ts`** — The classic set matching the original 1991 game board exactly. Use this when your original Dream Phone handset has stopped working but you still have the board and cards.
+- **`data.ts`**: A gender-inclusive set with 24 characters using they/them pronouns, original venues, and updated activities/foods/clothing. Yes, the data is silly and tropey (secret admirers who eat tofu scramble at The Sunny Side and do direct action at The Comrade's Table) but it's also a love letter to a lot of real friends.
+- **`data.old.ts`**: The classic set matching the original 1991 game board exactly. Use this when your original Dream Phone handset has stopped working but you still have the board and cards.
 
 To switch data sets, change the import path in `src/game/engine.ts` and `src/hooks/useGameEngine.ts`.
 
@@ -65,7 +67,9 @@ Copy `data.ts` as a template. A valid data set requires:
 
 ## Card generator
 
-The `cardgen/` directory contains a separate web app for generating printable game materials from any data set. Use it to create boards, cards, and score sheets for custom data sets — or to replace worn-out components from the original game.
+The `cardgen/` directory contains a separate web app for generating printable game materials from any data set. Use it to create boards, cards, and score sheets for custom data sets, or to replace worn-out components from the original game.
+
+**Live demo:** [dream-phony.netlify.app](https://dream-phony.netlify.app/)
 
 ### Running the card generator
 
