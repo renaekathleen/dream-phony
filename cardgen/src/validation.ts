@@ -21,6 +21,10 @@ function isNonEmptyString(val: unknown): val is string {
   return typeof val === 'string' && val.trim().length > 0;
 }
 
+function isValidIndex(val: unknown, arrayLen: number): val is number {
+  return typeof val === 'number' && Number.isInteger(val) && val >= 0 && val < arrayLen;
+}
+
 export interface ValidationError {
   field: string;
   message: string;
@@ -101,7 +105,7 @@ function validateAdmirers(
 
   const phonesSeen = new Set<string>();
   const namesSeen = new Set<string>();
-  const locationCounts = new Map<string, number>();
+  const locationCounts = new Map<number, number>();
   let foodCount = 0;
   let activityCount = 0;
 
@@ -139,15 +143,14 @@ function validateAdmirers(
       phonesSeen.add(String(a.phoneNumber));
     }
 
-    if (!isNonEmptyString(a.location) || !locations.includes(String(a.location))) {
-      errors.push({ field: `${prefix}.location`, message: `Location must be one of the defined locations.` });
+    if (!isValidIndex(a.location, locations.length)) {
+      errors.push({ field: `${prefix}.location`, message: `location must be an index 0–${locations.length - 1}.` });
     } else {
-      const loc = String(a.location);
-      locationCounts.set(loc, (locationCounts.get(loc) ?? 0) + 1);
+      locationCounts.set(a.location, (locationCounts.get(a.location) ?? 0) + 1);
     }
 
-    if (!isNonEmptyString(a.clothing) || !clothing.includes(String(a.clothing))) {
-      errors.push({ field: `${prefix}.clothing`, message: `Clothing must be one of the defined clothing items.` });
+    if (!isValidIndex(a.clothing, clothing.length)) {
+      errors.push({ field: `${prefix}.clothing`, message: `clothing must be an index 0–${clothing.length - 1}.` });
     }
 
     const hasActivity = a.activity !== null;
@@ -161,25 +164,25 @@ function validateAdmirers(
 
     if (hasActivity) {
       activityCount++;
-      if (!isNonEmptyString(a.activity) || !activities.includes(String(a.activity))) {
-        errors.push({ field: `${prefix}.activity`, message: 'Activity must be one of the defined activities.' });
+      if (!isValidIndex(a.activity, activities.length)) {
+        errors.push({ field: `${prefix}.activity`, message: `activity must be an index 0–${activities.length - 1}.` });
       }
     }
 
     if (hasFood) {
       foodCount++;
-      if (!isNonEmptyString(a.food) || !foods.includes(String(a.food))) {
-        errors.push({ field: `${prefix}.food`, message: 'Food must be one of the defined foods.' });
+      if (!isValidIndex(a.food, foods.length)) {
+        errors.push({ field: `${prefix}.food`, message: `food must be an index 0–${foods.length - 1}.` });
       }
     }
   }
 
-  for (const loc of locations) {
-    const count = locationCounts.get(loc) ?? 0;
+  for (let li = 0; li < locations.length; li++) {
+    const count = locationCounts.get(li) ?? 0;
     if (count !== ADMIRERS_PER_LOCATION) {
       errors.push({
         field: 'admirers',
-        message: `Location "${loc}" must have exactly ${ADMIRERS_PER_LOCATION} admirers, got ${count}.`,
+        message: `Location "${locations[li]}" (index ${li}) must have exactly ${ADMIRERS_PER_LOCATION} admirers, got ${count}.`,
       });
     }
   }
@@ -231,17 +234,16 @@ export function validateDataSet(raw: unknown): { data: DataSet | null; errors: V
     return { data: null, errors };
   }
 
-  const sanitizedAdmirers: Admirer[] = (obj.admirers as Record<string, unknown>[]).map(
-    (a, i) => ({
-      id: i,
-      name: sanitize(String(a.name), MAX_STRING_LENGTH),
-      phoneNumber: String(a.phoneNumber).replace(/\D/g, '').slice(0, 7),
-      location: sanitize(String(a.location), MAX_STRING_LENGTH),
-      activity: a.activity === null ? null : sanitize(String(a.activity), MAX_STRING_LENGTH),
-      food: a.food === null ? null : sanitize(String(a.food), MAX_STRING_LENGTH),
-      clothing: sanitize(String(a.clothing), MAX_STRING_LENGTH),
-    }),
-  );
+  const rawAdmirers = obj.admirers as Record<string, unknown>[];
+  const sanitizedAdmirers: Admirer[] = rawAdmirers.map((a, i) => ({
+    id: i,
+    name: sanitize(String(a.name), MAX_STRING_LENGTH),
+    phoneNumber: String(a.phoneNumber).replace(/\D/g, '').slice(0, 7),
+    location: sanitize(locations[a.location as number], MAX_STRING_LENGTH),
+    activity: a.activity === null ? null : sanitize(activities[a.activity as number], MAX_STRING_LENGTH),
+    food: a.food === null ? null : sanitize(foods[a.food as number], MAX_STRING_LENGTH),
+    clothing: sanitize(clothingArr[a.clothing as number], MAX_STRING_LENGTH),
+  }));
 
   const p = obj.pronouns as Record<string, unknown>;
   const sanitizedPronouns: Pronouns = {
@@ -257,14 +259,34 @@ export function validateDataSet(raw: unknown): { data: DataSet | null; errors: V
     data: {
       title: sanitize(String(obj.title), MAX_TITLE_LENGTH),
       pronouns: sanitizedPronouns,
-      locations: (obj.locations as string[]).map((s) => sanitize(s, MAX_STRING_LENGTH)),
-      activities: (obj.activities as string[]).map((s) => sanitize(s, MAX_STRING_LENGTH)),
-      foods: (obj.foods as string[]).map((s) => sanitize(s, MAX_STRING_LENGTH)),
-      clothing: (obj.clothing as string[]).map((s) => sanitize(s, MAX_STRING_LENGTH)),
+      locations: locations.map((s) => sanitize(s, MAX_STRING_LENGTH)),
+      activities: activities.map((s) => sanitize(s, MAX_STRING_LENGTH)),
+      foods: foods.map((s) => sanitize(s, MAX_STRING_LENGTH)),
+      clothing: clothingArr.map((s) => sanitize(s, MAX_STRING_LENGTH)),
       admirers: sanitizedAdmirers,
     },
     errors: [],
   };
+}
+
+export function dataSetToJson(ds: DataSet): string {
+  return JSON.stringify({
+    title: ds.title,
+    pronouns: ds.pronouns,
+    locations: ds.locations,
+    activities: ds.activities,
+    foods: ds.foods,
+    clothing: ds.clothing,
+    admirers: ds.admirers.map((a) => ({
+      id: a.id,
+      name: a.name,
+      phoneNumber: a.phoneNumber,
+      location: ds.locations.indexOf(a.location),
+      activity: a.activity === null ? null : ds.activities.indexOf(a.activity),
+      food: a.food === null ? null : ds.foods.indexOf(a.food),
+      clothing: ds.clothing.indexOf(a.clothing),
+    })),
+  }, null, 2);
 }
 
 export function formatPhone(digits: string): string {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { DataSet } from '../types';
 import type { ValidationError } from '../validation';
-import { validateDataSet } from '../validation';
+import { validateDataSet, dataSetToJson } from '../validation';
 import { PRESETS, getBlankTemplate } from '../presets';
 
 interface Props {
@@ -17,7 +17,7 @@ export function DataInput({ onDataLoaded, currentData }: Props) {
   const loadPreset = (key: string) => {
     const preset = PRESETS[key];
     if (preset) {
-      setJson(JSON.stringify(preset, null, 2));
+      setJson(dataSetToJson(preset));
       setErrors([]);
       setParseError('');
       onDataLoaded(preset);
@@ -60,8 +60,7 @@ export function DataInput({ onDataLoaded, currentData }: Props) {
       <h2>Data Set</h2>
 
       <div className="preset-buttons">
-        <button onClick={() => loadPreset('inclusive')}>Load Inclusive Set</button>
-        <button onClick={() => loadPreset('classic')}>Load Classic Set</button>
+        <button onClick={() => loadPreset('inclusive')}>Load Default Set</button>
         <button onClick={loadTemplate} className="secondary">Blank Template</button>
       </div>
 
