@@ -93,7 +93,7 @@ function buildCluePool(crush: Admirer): Clue[] {
 
 const FRIEND_CALL_SCHEDULE = [4, 10, 18, 28];
 
-export class DreamPhoneEngine {
+export class DreamPhonyEngine {
   private crush: Admirer | null = null;
   private clueMap = new Map<string, Clue | null>();
   private calledAdmirers = new Set<string>();

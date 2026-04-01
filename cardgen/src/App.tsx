@@ -27,7 +27,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header no-print">
-        <h1>Dream Phone Card Generator</h1>
+        <h1>Dream Phony Card Generator</h1>
         <p>Load or create a data set, then print game boards, cards, and score sheets.</p>
       </header>
 

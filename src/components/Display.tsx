@@ -27,7 +27,7 @@ export function Display({
   return (
     <View style={styles.container}>
       <View style={styles.statusBar}>
-        <Text style={styles.title}>DREAM PHONE</Text>
+        <Text style={styles.title}>DREAM PHONY</Text>
         <View style={styles.indicators}>
           {gameActive && speakerphone && (
             <Text style={styles.speakerIndicator}>SPEAKER</Text>

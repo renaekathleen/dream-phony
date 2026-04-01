@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Dream Phone",
-    "slug": "dreamphone",
+    "name": "Dream Phony",
+    "slug": "dream-phony",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -22,7 +22,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.dreamphone.app",
+      "package": "com.dreamphony.app",
       "permissions": []
     },
     "web": {

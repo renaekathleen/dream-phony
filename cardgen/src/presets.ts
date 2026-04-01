@@ -1,7 +1,7 @@
 import type { DataSet } from './types';
 
 export const PRESET_INCLUSIVE: DataSet = {
-  title: 'Dream Phone',
+  title: 'Dream Phony',
   pronouns: {
     subject: 'they',
     object: 'them',
@@ -46,7 +46,7 @@ export const PRESET_INCLUSIVE: DataSet = {
 };
 
 export const PRESET_CLASSIC: DataSet = {
-  title: 'Dream Phone Classic',
+  title: 'Dream Phony Classic',
   pronouns: {
     subject: 'he',
     object: 'him',

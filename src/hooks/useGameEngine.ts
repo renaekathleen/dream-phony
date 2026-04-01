@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { DreamPhoneEngine } from '../game/engine';
+import { DreamPhonyEngine } from '../game/engine';
 import { CallResult, FriendCall, GameState } from '../game/types';
 import { speakClue, speak, stopSpeaking } from '../utils/speech';
 import { findAdmirerByPhone, formatPhoneNumber } from '../game/data';
@@ -19,12 +19,12 @@ const INITIAL_STATE: GameState = {
   showText: true,
   dialedDigits: '',
   lastCall: null,
-  displayLines: ['DREAM PHONE', '', 'Press NEW GAME to start'],
+  displayLines: ['DREAM PHONY', '', 'Press NEW GAME to start'],
   isCalling: false,
 };
 
 export function useGameEngine() {
-  const engineRef = useRef(new DreamPhoneEngine());
+  const engineRef = useRef(new DreamPhonyEngine());
   const [state, setState] = useState<GameState>(INITIAL_STATE);
 
   useEffect(() => {
