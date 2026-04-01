@@ -1,14 +1,23 @@
-export interface Boy {
+export interface Pronouns {
+  subject: string;       // they / he / she
+  object: string;        // them / him / her
+  possessive: string;    // their / his / her
+  contraction: string;   // they're / he's / she's
+  dontDoesnt: string;    // they don't / he doesn't / she doesn't
+  thirdPerson: boolean;  // false for they (plural verb), true for he/she (adds -s)
+}
+
+export interface Admirer {
   id: number;
   name: string;
   phoneNumber: string;
   location: string;
-  sport: string | null;
+  activity: string | null;
   food: string | null;
   clothing: string;
 }
 
-export type ClueCategory = 'location' | 'sport' | 'food' | 'clothing';
+export type ClueCategory = 'location' | 'activity' | 'food' | 'clothing';
 
 export interface Clue {
   category: ClueCategory;
@@ -27,7 +36,7 @@ export type CallResultType =
 
 export interface CallResult {
   type: CallResultType;
-  boy?: Boy;
+  admirer?: Admirer;
   clue?: Clue;
 }
 

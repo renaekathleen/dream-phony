@@ -1,11 +1,12 @@
-import { Boy, Clue, ClueCategory, CallResult, FriendCall } from './types';
+import { Admirer, Clue, ClueCategory, CallResult, FriendCall } from './types';
 import {
-  BOYS,
+  ADMIRERS,
   ALL_LOCATIONS,
-  ALL_SPORTS,
+  ALL_ACTIVITIES,
   ALL_FOODS,
   ALL_CLOTHING,
-  findBoyByPhone,
+  PRONOUNS,
+  findAdmirerByPhone,
 } from './data';
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -31,80 +32,59 @@ function buildNegativeClue(
   };
 }
 
-function buildCluePool(crush: Boy): Clue[] {
+function verb(base: string): string {
+  if (!PRONOUNS.thirdPerson) return base;
+  if (base.endsWith('s') || base.endsWith('sh') || base.endsWith('ch') || base.endsWith('x') || base.endsWith('z'))
+    return base + 'es';
+  return base + 's';
+}
+
+function cap(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function buildCluePool(crush: Admirer): Clue[] {
   const pool: Clue[] = [];
+  const p = PRONOUNS;
+
+  const locationLoud = `I know where ${p.subject} ${verb('hang')} out!`;
+  const locationQuiet = `${cap(p.contraction)} not at`;
+  const activityLoud = `I know what ${p.subject} ${verb('like')} to do!`;
+  const activityQuiet = `${cap(p.contraction)} not into`;
+  const foodLoud = `${cap(p.subject)} ${verb('love')} to eat!`;
+  const foodQuiet = `${cap(p.dontDoesnt)} like`;
+  const clothingLoud = `${cap(p.subject)} always ${verb('look')} amazing!`;
+  const clothingQuiet = `${cap(p.dontDoesnt)} wear`;
 
   for (const loc of ALL_LOCATIONS) {
     if (loc !== crush.location) {
-      pool.push(
-        buildNegativeClue(
-          'location',
-          loc,
-          'I know where they hang out!',
-          "They're not at"
-        )
-      );
+      pool.push(buildNegativeClue('location', loc, locationLoud, locationQuiet));
     }
   }
 
-  if (crush.sport !== null) {
-    for (const sport of ALL_SPORTS) {
-      if (sport !== crush.sport) {
-        pool.push(
-          buildNegativeClue(
-            'sport',
-            sport,
-            'I know what they like to do!',
-            "They're not into"
-          )
-        );
+  if (crush.activity !== null) {
+    for (const activity of ALL_ACTIVITIES) {
+      if (activity !== crush.activity) {
+        pool.push(buildNegativeClue('activity', activity, activityLoud, activityQuiet));
       }
     }
     for (const food of ALL_FOODS) {
-      pool.push(
-        buildNegativeClue(
-          'food',
-          food,
-          'They love to eat!',
-          "They don't like"
-        )
-      );
+      pool.push(buildNegativeClue('food', food, foodLoud, foodQuiet));
     }
   } else {
-    for (const sport of ALL_SPORTS) {
-      pool.push(
-        buildNegativeClue(
-          'sport',
-          sport,
-          'I know what they like to do!',
-          "They're not into"
-        )
-      );
+    for (const activity of ALL_ACTIVITIES) {
+      pool.push(buildNegativeClue('activity', activity, activityLoud, activityQuiet));
     }
     for (const food of ALL_FOODS) {
       if (food !== crush.food) {
-        pool.push(
-          buildNegativeClue(
-            'food',
-            food,
-            'They love to eat!',
-            "They don't like"
-          )
-        );
+        pool.push(buildNegativeClue('food', food, foodLoud, foodQuiet));
       }
     }
   }
 
   for (const cloth of ALL_CLOTHING) {
     if (cloth !== crush.clothing) {
-      pool.push(
-        buildNegativeClue(
-          'clothing',
-          cloth,
-          'They always look amazing!',
-          "They don't wear"
-        )
-      );
+      pool.push(buildNegativeClue('clothing', cloth, clothingLoud, clothingQuiet));
     }
   }
 
@@ -114,9 +94,9 @@ function buildCluePool(crush: Boy): Clue[] {
 const FRIEND_CALL_SCHEDULE = [4, 10, 18, 28];
 
 export class DreamPhoneEngine {
-  private crush: Boy | null = null;
+  private crush: Admirer | null = null;
   private clueMap = new Map<string, Clue | null>();
-  private calledBoys = new Set<string>();
+  private calledAdmirers = new Set<string>();
   private _lastCall: CallResult | null = null;
   private turnCount = 0;
   private friendCallQueue: string[] = [];
@@ -130,27 +110,27 @@ export class DreamPhoneEngine {
     return this._lastCall;
   }
 
-  newGame(): Boy {
-    const crushIndex = Math.floor(Math.random() * BOYS.length);
-    this.crush = BOYS[crushIndex];
+  newGame(): Admirer {
+    const crushIndex = Math.floor(Math.random() * ADMIRERS.length);
+    this.crush = ADMIRERS[crushIndex];
 
     const cluePool = shuffleArray(buildCluePool(this.crush));
-    const nonCrushBoys = shuffleArray(
-      BOYS.filter((b) => b.id !== this.crush!.id)
+    const others = shuffleArray(
+      ADMIRERS.filter((a) => a.id !== this.crush!.id)
     );
 
     this.clueMap.clear();
-    this.calledBoys.clear();
+    this.calledAdmirers.clear();
     this._lastCall = null;
     this.turnCount = 0;
     this.nextFriendCallIndex = 0;
     this.friendCallQueue = shuffleArray(
-      nonCrushBoys.map((b) => b.name)
+      others.map((a) => a.name)
     );
 
-    for (let i = 0; i < nonCrushBoys.length; i++) {
+    for (let i = 0; i < others.length; i++) {
       this.clueMap.set(
-        nonCrushBoys[i].phoneNumber,
+        others[i].phoneNumber,
         i < cluePool.length ? cluePool[i] : null
       );
     }
@@ -165,30 +145,26 @@ export class DreamPhoneEngine {
       return { type: 'no_game' };
     }
 
-    const boy = findBoyByPhone(phoneNumber);
-    if (!boy) {
+    const admirer = findAdmirerByPhone(phoneNumber);
+    if (!admirer) {
       return { type: 'wrong_number' };
     }
 
     const clue = this.clueMap.get(phoneNumber) ?? null;
-    const firstCall = !this.calledBoys.has(phoneNumber);
-    this.calledBoys.add(phoneNumber);
+    const firstCall = !this.calledAdmirers.has(phoneNumber);
+    this.calledAdmirers.add(phoneNumber);
 
     const result: CallResult = clue
-      ? { type: 'clue', boy, clue }
-      : { type: 'no_clue', boy };
+      ? { type: 'clue', admirer, clue }
+      : { type: 'no_clue', admirer };
 
-    if (firstCall) {
-      this._lastCall = result;
-    } else {
-      this._lastCall = result;
-    }
+    this._lastCall = result;
 
     return result;
   }
 
   isFirstCall(phoneNumber: string): boolean {
-    return !this.calledBoys.has(phoneNumber);
+    return !this.calledAdmirers.has(phoneNumber);
   }
 
   guess(phoneNumber: string): CallResult {
@@ -196,14 +172,14 @@ export class DreamPhoneEngine {
       return { type: 'no_game' };
     }
 
-    const boy = findBoyByPhone(phoneNumber);
-    if (!boy) {
+    const admirer = findAdmirerByPhone(phoneNumber);
+    if (!admirer) {
       return { type: 'wrong_number' };
     }
 
-    return boy.id === this.crush.id
-      ? { type: 'correct_guess', boy }
-      : { type: 'wrong_guess', boy };
+    return admirer.id === this.crush.id
+      ? { type: 'correct_guess', admirer }
+      : { type: 'wrong_guess', admirer };
   }
 
   recordTurn(): void {
@@ -224,7 +200,7 @@ export class DreamPhoneEngine {
     return this._lastCall;
   }
 
-  getCrush(): Boy | null {
+  getCrush(): Admirer | null {
     return this.crush;
   }
 }

@@ -18,9 +18,14 @@ const DTMF_FREQS: Record<string, [number, number]> = {
 
 const SAMPLE_RATE = 16000;
 
-const playerCache = new Map<string, AudioPlayer>();
-let outgoingRingPlayer: AudioPlayer | null = null;
-let incomingRingPlayer: AudioPlayer | null = null;
+interface CachedSound {
+  player: AudioPlayer;
+  uri: string;
+}
+
+const playerCache = new Map<string, CachedSound>();
+let outgoingRing: CachedSound | null = null;
+let incomingRing: CachedSound | null = null;
 let initialized = false;
 
 function writeWavHeader(view: DataView, numSamples: number): void {
@@ -108,11 +113,12 @@ function safeFileName(digit: string): string {
   return digit;
 }
 
-function createAndCachePlayer(name: string, bytes: Uint8Array): AudioPlayer | null {
+function createCachedSound(name: string, bytes: Uint8Array): CachedSound | null {
   try {
     const file = new File(Paths.cache, `${name}.wav`);
     file.write(bytes);
-    return createAudioPlayer({ uri: file.uri });
+    const uri = file.uri;
+    return { player: createAudioPlayer({ uri }), uri };
   } catch {
     return null;
   }
@@ -123,16 +129,16 @@ export async function initDTMF(): Promise<void> {
 
   for (const [digit, [f1, f2]] of Object.entries(DTMF_FREQS)) {
     const bytes = generateWav(0.15, dtmfSample(f1, f2));
-    const player = createAndCachePlayer(`dtmf_${safeFileName(digit)}`, bytes);
-    if (player) playerCache.set(digit, player);
+    const sound = createCachedSound(`dtmf_${safeFileName(digit)}`, bytes);
+    if (sound) playerCache.set(digit, sound);
   }
 
-  outgoingRingPlayer = createAndCachePlayer(
+  outgoingRing = createCachedSound(
     'ring_outgoing',
     generateWav(7, outgoingRingSample)
   );
 
-  incomingRingPlayer = createAndCachePlayer(
+  incomingRing = createCachedSound(
     'ring_incoming',
     generateWav(5, incomingRingSample)
   );
@@ -141,33 +147,40 @@ export async function initDTMF(): Promise<void> {
 }
 
 export function playTone(digit: string): void {
-  const player = playerCache.get(digit);
-  if (!player) return;
-  player.seekTo(0).then(() => player.play()).catch(() => {});
+  const sound = playerCache.get(digit);
+  if (!sound) return;
+  try {
+    sound.player.play();
+  } catch {}
+  setTimeout(() => {
+    sound.player.seekTo(0).catch(() => {});
+  }, 180);
 }
 
-function playRing(player: AudioPlayer | null): Promise<void> {
-  if (!player) return Promise.resolve();
-  return player.seekTo(0).then(() => player.play()).catch(() => {});
+function playRing(sound: CachedSound | null): void {
+  if (!sound) return;
+  try {
+    sound.player.seekTo(0).then(() => sound.player.play()).catch(() => {});
+  } catch {}
 }
 
-function stopRing(player: AudioPlayer | null): void {
-  if (!player) return;
-  try { player.pause(); } catch {}
+function stopRing(sound: CachedSound | null): void {
+  if (!sound) return;
+  try { sound.player.pause(); } catch {}
 }
 
-export function playOutgoingRing(): Promise<void> {
-  return playRing(outgoingRingPlayer);
+export function playOutgoingRing(): void {
+  playRing(outgoingRing);
 }
 
 export function stopOutgoingRing(): void {
-  stopRing(outgoingRingPlayer);
+  stopRing(outgoingRing);
 }
 
-export function playIncomingRing(): Promise<void> {
-  return playRing(incomingRingPlayer);
+export function playIncomingRing(): void {
+  playRing(incomingRing);
 }
 
 export function stopIncomingRing(): void {
-  stopRing(incomingRingPlayer);
+  stopRing(incomingRing);
 }

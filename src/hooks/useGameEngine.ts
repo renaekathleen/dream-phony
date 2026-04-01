@@ -2,7 +2,7 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import { DreamPhoneEngine } from '../game/engine';
 import { CallResult, FriendCall, GameState } from '../game/types';
 import { speakClue, speak, stopSpeaking } from '../utils/speech';
-import { findBoyByPhone, formatPhoneNumber } from '../game/data';
+import { findAdmirerByPhone, formatPhoneNumber } from '../game/data';
 import { initAudioRouting, setSpeakerphone } from '../utils/audioRouting';
 import {
   initDTMF,
@@ -93,23 +93,31 @@ export function useGameEngine() {
         return;
       }
 
+      const name = result.admirer!.name;
+
+      setDisplay(`Calling ${name}...`, '', '* ring * ring *');
+      await playOutgoingRing();
+      await new Promise((r) => setTimeout(r, 3000));
+      stopOutgoingRing();
+
       if (result.type === 'correct_guess') {
-        setDisplay(
-          `${result.boy!.name} is your`,
-          'secret admirer!',
-          '',
-          'YOU WIN!'
-        );
-        await speak(
-          `Yes! ${result.boy!.name} is your secret admirer! You got it right!`
-        );
+        const wins = [
+          { display: "You're right, I really like you!", speech: `Hi! It's ${name}! You're right, I really like you!` },
+          { display: "You figured it out! I'm your admirer!", speech: `Hey, it's ${name}. You figured it out! I'm your secret admirer!` },
+          { display: "Yes! I was hoping you'd call!", speech: `Oh my gosh, it's ${name}! Yes! I was hoping you'd call!` },
+          { display: "You got me! I can't hide it anymore!", speech: `Hi, it's ${name}. You got me! I can't hide it anymore!` },
+          { display: "Finally! I've been waiting for this!", speech: `It's ${name}! Finally! I've been waiting for this call!` },
+        ];
+        const w = wins[Math.floor(Math.random() * wins.length)];
+        setDisplay(`${name}:`, '', w.display);
+        await speak(w.speech);
         setState((s) => ({
           ...s,
           isCalling: false,
           guessMode: false,
           gameActive: false,
           displayLines: [
-            `${result.boy!.name} is your`,
+            `${name} is your`,
             'secret admirer!',
             '',
             'YOU WIN!',
@@ -118,8 +126,16 @@ export function useGameEngine() {
           ],
         }));
       } else {
-        setDisplay(`${result.boy!.name}?`, '', "That's not right!", 'Try again next turn');
-        await speak(`${result.boy!.name}? No way! That's not right. Try again!`);
+        const rejects = [
+          { display: "No, it's not me!", speech: `Hi, it's ${name}. No, it's not me! Try someone else.` },
+          { display: "Nope, sorry! Wrong person.", speech: `Hey, it's ${name}. Nope, sorry! Wrong person.` },
+          { display: "Ha! Nice try, but no.", speech: `It's ${name}. Ha! Nice try, but no.` },
+          { display: "Not me! Keep looking!", speech: `Hi, it's ${name}. Not me! Keep looking!` },
+          { display: "I wish! But no, not me.", speech: `Hey, it's ${name}. I wish! But no, it's not me.` },
+        ];
+        const r = rejects[Math.floor(Math.random() * rejects.length)];
+        setDisplay(`${name}:`, '', r.display, 'Try again next turn');
+        await speak(r.speech);
         setState((s) => ({
           ...s,
           isCalling: false,
@@ -151,7 +167,7 @@ export function useGameEngine() {
       dialedDigits: '',
     }));
 
-    setDisplay(`Calling ${result.boy!.name}...`, '', '* ring * ring *');
+    setDisplay(`Calling ${result.admirer!.name}...`, '', '* ring * ring *');
     await playOutgoingRing();
     await new Promise((r) => setTimeout(r, 3000));
     stopOutgoingRing();
@@ -167,14 +183,14 @@ export function useGameEngine() {
     isFirst: boolean,
     speakerphone: boolean
   ) => {
-    const boyName = result.boy!.name;
+    const admirerName = result.admirer!.name;
 
     if (result.type === 'no_clue') {
       const msg = `Ha ha! I'm not telling!`;
-      setDisplay(boyName + ':', '', msg);
+      setDisplay(admirerName + ':', '', msg);
       await speak(
         isFirst
-          ? `Hello? This is ${boyName}. Ha ha! I'm not telling!`
+          ? `Hello? This is ${admirerName}. Ha ha! I'm not telling!`
           : `You again? Ha ha, I'm still not telling!`
       );
       return;
@@ -184,14 +200,14 @@ export function useGameEngine() {
 
     if (speakerphone) {
       setDisplay(
-        boyName + ':',
+        admirerName + ':',
         clue.loudMessage,
         '',
         clue.quietMessage
       );
     } else {
       setDisplay(
-        boyName + ':',
+        admirerName + ':',
         clue.loudMessage,
         '',
         '(hold phone to ear)'
@@ -199,7 +215,7 @@ export function useGameEngine() {
     }
 
     const greeting = isFirst
-      ? `Hello? This is ${boyName}. You want to know about your secret admirer?`
+      ? `Hello? This is ${admirerName}. You want to know about your secret admirer?`
       : `You again? I already told you!`;
 
     await speak(greeting);
@@ -209,7 +225,7 @@ export function useGameEngine() {
     await setSpeakerphone(speakerphone);
     await new Promise((r) => setTimeout(r, 300));
 
-    setDisplay(boyName + ':', clue.loudMessage, '', clue.quietMessage);
+    setDisplay(admirerName + ':', clue.loudMessage, '', clue.quietMessage);
     await speak(clue.quietMessage);
   };
 
@@ -247,7 +263,7 @@ export function useGameEngine() {
     const engine = engineRef.current;
     const lastCall = engine.redial();
 
-    if (!lastCall || !lastCall.boy) {
+    if (!lastCall || !lastCall.admirer) {
       setDisplay('No previous call', '', 'Dial a number first');
       return;
     }
@@ -257,9 +273,9 @@ export function useGameEngine() {
     setState((s) => ({ ...s, isCalling: true, dialedDigits: '' }));
 
     setDisplay(
-      `Redialing ${lastCall.boy.name}...`,
+      `Redialing ${lastCall.admirer.name}...`,
       '',
-      formatPhoneNumber(lastCall.boy.phoneNumber)
+      formatPhoneNumber(lastCall.admirer.phoneNumber)
     );
     await playOutgoingRing();
     await new Promise((r) => setTimeout(r, 3000));
