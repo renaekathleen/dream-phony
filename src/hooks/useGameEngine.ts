@@ -223,14 +223,14 @@ export function useGameEngine() {
       );
     }
 
-    const greeting = isFirst
-      ? `Hello? This is ${admirerName}. You want to know about your secret admirer?`
-      : `You again? I already told you!`;
-
-    await speak(greeting);
-
-    await setSpeakerphone(true);
-    await speak(clue.loudMessage);
+    if (isFirst) {
+      await speak(`Hello? This is ${admirerName}. You want to know about your secret admirer?`);
+      await setSpeakerphone(true);
+      await speak(clue.loudMessage);
+    } else {
+      await setSpeakerphone(true);
+      await speak(`You again? I already told you! ${clue.loudMessage}`);
+    }
     await setSpeakerphone(speakerphone);
     await new Promise((r) => setTimeout(r, 300));
 

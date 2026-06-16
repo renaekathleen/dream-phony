@@ -60,6 +60,7 @@ export default function App() {
         {activeTab === 'board' && data && (
           <>
             <div className="print-controls no-print">
+              <span className="print-tip">Best printed in landscape</span>
               <button onClick={handlePrint} className="primary">Print Game Board</button>
             </div>
             <GameBoard data={data} />

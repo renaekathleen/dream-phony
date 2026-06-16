@@ -137,7 +137,15 @@ button.secondary { color: var(--text-muted); }
 
 .print-controls {
   margin-bottom: 1rem;
-  text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+}
+.print-tip {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 /* ── Game board ── */
@@ -169,6 +177,7 @@ button.secondary { color: var(--text-muted); }
 .admirer-row-header {
   display: grid;
   grid-template-columns: 1.2fr 1fr 1.2fr 1.2fr;
+  gap: 0 0.75rem;
   padding: 0.25rem 0.75rem;
   font-size: 0.7rem;
   color: var(--text-muted);
@@ -179,10 +188,12 @@ button.secondary { color: var(--text-muted); }
 .admirer-row {
   display: grid;
   grid-template-columns: 1.2fr 1fr 1.2fr 1.2fr;
+  gap: 0 0.75rem;
   padding: 0.35rem 0.75rem;
   font-size: 0.85rem;
   border-bottom: 1px solid #f0f0f0;
 }
+.col-phone { white-space: nowrap; }
 .admirer-row:last-child { border-bottom: none; }
 
 .board-legend {
@@ -351,13 +362,23 @@ button.secondary { color: var(--text-muted); }
 
 /* ── Print styles ── */
 
+@page { size: 11in 8.5in; margin: 0.75in; }
+
 @media print {
   .no-print { display: none !important; }
 
   body { background: #fff; }
   .app { max-width: 100%; padding: 0; }
 
-  .printable { padding: 0.5in; }
+  .printable { padding: 0; }
+  .sheet-grid { gap: 2.5rem; }
+  .sheet-item { padding: 0.4rem 0.75rem 0.4rem 1.75rem; }
+  .called-columns { gap: 1rem 2rem; }
+  .called-item { padding: 0.35rem 0.75rem 0.35rem 1.75rem; }
+  .suspect-list { gap: 0.2rem 2rem; }
+  .admirer-row { padding: 0.5rem 1rem; gap: 0 1rem; }
+  .admirer-row-header { padding: 0.35rem 1rem; gap: 0 1rem; }
+  .location-name { padding: 0.5rem 1rem; }
 
   .print-header h2 { color: #000; }
   .location-name { background: #333; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -369,6 +390,6 @@ button.secondary { color: var(--text-muted); }
   .called-location-group { break-inside: avoid; }
   .score-sheet { break-inside: avoid; }
 
-  .board-grid { grid-template-columns: repeat(3, 1fr); }
+  .board-grid { grid-template-columns: repeat(2, 1fr); }
   .card-grid { grid-template-columns: repeat(4, 1fr); }
 }
