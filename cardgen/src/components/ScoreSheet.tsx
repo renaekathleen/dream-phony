@@ -1,4 +1,5 @@
 import type { DataSet } from '../types';
+import { formatPhone } from '../validation';
 
 interface Props {
   data: DataSet;
@@ -46,8 +47,31 @@ export function ScoreSheet({ data }: Props) {
         </div>
       </div>
 
+      <div className="called-section">
+        <h4>Called Admirers</h4>
+        <p className="sheet-note">Check off each admirer you've called this round</p>
+        <div className="called-columns">
+          {data.locations.map((loc) => {
+            const group = data.admirers.filter((a) => a.location === loc);
+            if (group.length === 0) return null;
+            return (
+              <div key={loc} className="called-location-group">
+                <div className="called-location-name">{loc}</div>
+                {group.map((a) => (
+                  <div key={a.id} className="called-item">
+                    <span className="called-name">{a.name}</span>
+                    <span className="called-phone">{formatPhone(a.phoneNumber)}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="suspect-grid">
         <h4>Suspects</h4>
+        <p className="sheet-note">Cross off admirers who are <em>not</em> your secret admirer</p>
         <div className="suspect-list">
           {data.admirers.map((a) => (
             <div key={a.id} className="sheet-item suspect-item">{a.name}</div>

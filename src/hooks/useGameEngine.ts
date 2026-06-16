@@ -89,7 +89,8 @@ export function useGameEngine() {
       const result = engine.guess(digits);
       if (result.type === 'wrong_number') {
         setDisplay("That's not", "anyone's number!", '', 'Try again');
-        setState((s) => ({ ...s, isCalling: false }));
+        await setSpeakerphone(false);
+        setState((s) => ({ ...s, isCalling: false, speakerphone: false }));
         return;
       }
 
@@ -111,11 +112,13 @@ export function useGameEngine() {
         const w = wins[Math.floor(Math.random() * wins.length)];
         setDisplay(`${name}:`, '', w.display);
         await speak(w.speech);
+        await setSpeakerphone(false);
         setState((s) => ({
           ...s,
           isCalling: false,
           guessMode: false,
           gameActive: false,
+          speakerphone: false,
           displayLines: [
             `${name} is your`,
             'secret admirer!',
@@ -136,16 +139,17 @@ export function useGameEngine() {
         const r = rejects[Math.floor(Math.random() * rejects.length)];
         setDisplay(`${name}:`, '', r.display, 'Try again next turn');
         await speak(r.speech);
+        await setSpeakerphone(false);
         setState((s) => ({
           ...s,
           isCalling: false,
           guessMode: false,
+          speakerphone: false,
         }));
       }
       return;
     }
 
-    const isFirst = engine.isFirstCall(digits);
     const result = engine.dial(digits);
 
     if (result.type === 'wrong_number') {
@@ -156,7 +160,8 @@ export function useGameEngine() {
       stopOutgoingRing();
       setDisplay('Uh oh!', '', 'Wrong number!');
       await speak('Uh oh, wrong number!');
-      setState((s) => ({ ...s, isCalling: false }));
+      await setSpeakerphone(false);
+      setState((s) => ({ ...s, isCalling: false, speakerphone: false }));
       return;
     }
 
@@ -172,10 +177,12 @@ export function useGameEngine() {
     await new Promise((r) => setTimeout(r, 3000));
     stopOutgoingRing();
 
-    await playClueResult(result, isFirst, currentState.speakerphone);
+    await playClueResult(result, true, currentState.speakerphone);
 
     setState((s) => ({ ...s, isCalling: false }));
     await checkAndPlayFriendCall();
+    await setSpeakerphone(false);
+    setState((s) => ({ ...s, speakerphone: false }));
   }, [state, setDisplay]);
 
   const playClueResult = async (
@@ -193,6 +200,8 @@ export function useGameEngine() {
           ? `Hello? This is ${admirerName}. Ha ha! I'm not telling!`
           : `You again? Ha ha, I'm still not telling!`
       );
+      await new Promise((r) => setTimeout(r, 2000));
+      setState((s) => ({ ...s, displayLines: ['', '', ''] }));
       return;
     }
 
@@ -227,6 +236,8 @@ export function useGameEngine() {
 
     setDisplay(admirerName + ':', clue.loudMessage, '', clue.quietMessage);
     await speak(clue.quietMessage);
+    await new Promise((r) => setTimeout(r, 2000));
+    setState((s) => ({ ...s, displayLines: ['', '', ''] }));
   };
 
   const playFriendCall = async (friendCall: FriendCall) => {
@@ -285,6 +296,8 @@ export function useGameEngine() {
 
     setState((s) => ({ ...s, isCalling: false }));
     await checkAndPlayFriendCall();
+    await setSpeakerphone(false);
+    setState((s) => ({ ...s, speakerphone: false }));
   }, [state.isCalling, state.speakerphone, setDisplay]);
 
   const toggleSpeakerphone = useCallback(() => {
@@ -302,9 +315,13 @@ export function useGameEngine() {
     if (state.isCalling || !state.gameActive) return;
     setState((prev) => {
       const newGuess = !prev.guessMode;
+      if (newGuess) {
+        setSpeakerphone(true).catch(() => {});
+      }
       return {
         ...prev,
         guessMode: newGuess,
+        speakerphone: newGuess ? true : prev.speakerphone,
         dialedDigits: '',
         displayLines: newGuess
           ? ['GUESS MODE', '', 'Dial the number of', 'your crush guess']

@@ -240,9 +240,12 @@ button.secondary { color: var(--text-muted); }
 
 .sheet-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.25rem;
-  margin-bottom: 1.5rem;
+  grid-template-columns: repeat(2, minmax(200px, 1fr));
+  gap: 1.75rem;
+  margin-bottom: 1.75rem;
+}
+.sheet-section {
+  min-width: 200px;
 }
 .sheet-section h4 {
   font-size: 0.85rem;
@@ -253,30 +256,97 @@ button.secondary { color: var(--text-muted); }
   padding-bottom: 0.25rem;
 }
 .sheet-item {
-  padding: 0.25rem 0 0.25rem 1rem;
+  padding: 0.35rem 0.5rem 0.35rem 1.5rem;
   font-size: 0.9rem;
   position: relative;
 }
 .sheet-item::before {
   content: '•';
   position: absolute;
-  left: 0;
+  left: 0.25rem;
   color: var(--text-muted);
 }
+
+.sheet-note {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+  font-style: italic;
+}
+
+/* Called admirers */
+
+.called-section {
+  margin-bottom: 1.75rem;
+}
+.called-section h4 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: var(--pink);
+  margin-bottom: 0.25rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.25rem;
+}
+.called-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem 1.5rem;
+  margin-top: 0.6rem;
+}
+.called-location-group {
+  min-width: 180px;
+}
+.called-location-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px dotted var(--border);
+}
+.called-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.3rem 0.5rem 0.3rem 1.5rem;
+  font-size: 0.88rem;
+  position: relative;
+  gap: 0.5rem;
+}
+.called-item::before {
+  content: '•';
+  position: absolute;
+  left: 0.25rem;
+  color: var(--text-muted);
+}
+.called-name {
+  flex: 1;
+}
+.called-phone {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Suspects */
 
 .suspect-grid { margin-bottom: 1.5rem; }
 .suspect-grid h4 {
   font-size: 0.85rem;
   text-transform: uppercase;
   color: var(--pink);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
   border-bottom: 1px solid var(--border);
   padding-bottom: 0.25rem;
 }
 .suspect-list {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.1rem 1rem;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 0.1rem 1.25rem;
+  margin-top: 0.6rem;
 }
 
 /* ── Print styles ── */
@@ -296,6 +366,7 @@ button.secondary { color: var(--text-muted); }
   .game-card { break-inside: avoid; }
   .location-group { break-inside: avoid; }
   .sheet-section { break-inside: avoid; }
+  .called-location-group { break-inside: avoid; }
   .score-sheet { break-inside: avoid; }
 
   .board-grid { grid-template-columns: repeat(3, 1fr); }
